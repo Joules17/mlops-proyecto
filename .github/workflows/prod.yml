@@ -1,0 +1,117 @@
+name: CI/CD Pipeline - PROD
+
+on:
+  push:
+    branches:
+      - prod
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  BUCKET_NAME: mlops-sentiment-bucket
+  REGION: us-central1
+  SERVICE_NAME: toxic-classifier-prod
+  IMAGE_NAME: toxic-classifier-prod
+
+jobs:
+  # -------------------------------------------------------
+  # ETAPA 1: TEST
+  # -------------------------------------------------------
+  test:
+    name: Run Model Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Download model from GCS
+        run: |
+          mkdir -p model
+          gsutil cp gs://${{ env.BUCKET_NAME }}/model/model.onnx model/model.onnx
+          echo "Modelo descargado correctamente"
+
+      - name: Download test data from GCS
+        run: |
+          mkdir -p data
+          gsutil cp gs://${{ env.BUCKET_NAME }}/data/test_data_esp.csv data/test_data_esp.csv
+          echo "Datos de prueba descargados correctamente"
+
+      - name: Run unit tests
+        env:
+          MODEL_PATH: model/model.onnx
+          TEST_DATA_PATH: data/test_data_esp.csv
+        run: |
+          pytest tests/test_model.py -v --tb=short
+
+  # -------------------------------------------------------
+  # ETAPA 2: BUILD & DEPLOY
+  # -------------------------------------------------------
+  build:
+    name: Build & Deploy to Cloud Run (PROD)
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Download model from GCS for Docker build
+        run: |
+          mkdir -p model
+          gsutil cp gs://${{ env.BUCKET_NAME }}/model/model.onnx model/model.onnx
+          echo "Modelo descargado para construcción del contenedor"
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg ENVIRONMENT=prod \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/toxic-classifier/${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/toxic-classifier/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            .
+
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/toxic-classifier/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/toxic-classifier/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Deploy to Cloud Run (PROD)
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/toxic-classifier/${{ env.IMAGE_NAME }}:latest \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars ENVIRONMENT=prod,BUCKET_NAME=${{ env.BUCKET_NAME }} \
+            --memory 2Gi \
+            --cpu 2
+
+      - name: Show PROD endpoint
+        run: |
+          echo "PROD endpoint:"
+          gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format "value(status.url)"
