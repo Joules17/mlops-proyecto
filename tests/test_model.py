@@ -29,7 +29,7 @@ def tokenizer():
 def test_data():
     """Carga los datos de prueba"""
     assert os.path.exists(TEST_DATA_PATH), f"Datos no encontrados en {TEST_DATA_PATH}"
-    df = pd.read_csv(TEST_DATA_PATH, sep=";")
+    df = pd.read_csv(TEST_DATA_PATH, sep=";", encoding="latin-1")
     return df
 
 
