@@ -111,7 +111,8 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars ENVIRONMENT=prod,BUCKET_NAME=${{ env.BUCKET_NAME }} \
             --memory 2Gi \
-            --cpu 2
+            --cpu 2 \
+            --port 8000
 
       - name: Show PROD endpoint
         run: |
