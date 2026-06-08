@@ -58,7 +58,7 @@ jobs:
           MODEL_PATH: model/model.onnx
           TEST_DATA_PATH: data/test_data_esp.csv
         run: |
-          pytest tests/test_model.py -v --tb=short
+          pytest tests/test_model.py -v --tb=short -s
 
   # -------------------------------------------------------
   # ETAPA 2: BUILD & DEPLOY
