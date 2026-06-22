@@ -44,7 +44,7 @@ jobs:
       - name: Download model from GCS
         run: |
           mkdir -p model
-          gsutil cp gs://${{ env.BUCKET_NAME }}/models/model_xenova.onnx model/model.onnx
+          gsutil cp gs://${{ env.BUCKET_NAME }}/models/model.onnx model/model.onnx
           echo "Modelo descargado correctamente"
 
       - name: Download test data from GCS
