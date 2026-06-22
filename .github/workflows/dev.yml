@@ -86,7 +86,7 @@ jobs:
       - name: Download model from GCS for Docker build
         run: |
           mkdir -p model
-          gsutil cp gs://${{ env.BUCKET_NAME }}/models/model_xenova.onnx model/model.onnx
+          gsutil cp gs://${{ env.BUCKET_NAME }}/models/model.onnx model/model.onnx
           echo "Modelo descargado para construcción del contenedor"
 
       - name: Build Docker image
