@@ -41,6 +41,9 @@ mlops-proyecto/
 - **Tarea:** Clasificación binaria de toxicidad en comentarios (tóxico: 1 / no tóxico: 0)
 - **Idiomas:** Multilingue - Pruebas funcionales en español
 
+## Modelo alterno  
+- **Modelo:** `Xenova/distilbert-base-multilingual-cased-sentiments-student`  
+
 ## Pruebas unitarias
 
 El pipeline corre dos pruebas antes de desplegar:
