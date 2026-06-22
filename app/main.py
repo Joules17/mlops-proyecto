@@ -52,7 +52,7 @@ def log_prediction(result: dict):
 @app.get("/")
 def root():
     return {
-        "message": "Toxic Comment Classifier API",
+        "message": "Toxic Comment Classifier API v.2.0 Prueba",
         "environment": ENVIRONMENT,
         "status": "running",
     }
@@ -60,7 +60,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "environment": ENVIRONMENT}
+    return {"status": "exitoso", "environment": ENVIRONMENT}
 
 
 @app.post("/predict", response_model=PredictionResponse)
